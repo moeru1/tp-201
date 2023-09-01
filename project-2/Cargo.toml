@@ -1,0 +1,18 @@
+[package]
+name = "kvs"
+version = "0.1.0"
+authors = ["Ann Cisneros <ann.cisneros1@gmail.com>"]
+description = "A key-value store"
+edition = "2021"
+
+[dev-dependencies]
+assert_cmd = "0.11.0"
+predicates = "1.0.0"
+tempfile = "3.0.7"
+walkdir = "2.2.7"
+
+[dependencies]
+anyhow = { version = "1.0.75", features = ["backtrace"] }
+clap = { version = "4.4.1", features = ["derive"] }
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.105"
