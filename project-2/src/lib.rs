@@ -4,17 +4,21 @@
 //! A library to create a key-value store in memory
 
 pub use anyhow::Result;
+use anyhow::anyhow;
 use std::{
     collections::HashMap,
     path::PathBuf,
     io::{BufReader, BufRead, Write},
     fs::File,
-    fs,
+    fmt,
 };
 use serde::{Serialize, Deserialize};
 use LogCommands::{Set, Rm};
 
 
+/// Error type 
+#[derive(Debug, Clone)]
+pub struct KeyNotFound;
 
 /// main struct of `KvStore`
 pub struct KvStore {
@@ -28,6 +32,14 @@ enum LogCommands {
     Set(String, String),
     Rm(String),
 }
+
+
+impl fmt::Display for KeyNotFound {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Key not Found")
+    }
+}
+
 
 impl KvStore {
     /// Creates an empty kv_store
@@ -54,10 +66,12 @@ impl KvStore {
             }
         }
         
-        let mut log_file = File::options()
+        println!("creating file");
+        let log_file = File::options()
             .read(true)
             .write(true)
             .append(true)
+            .create(true)
             .open(path)?;
 
 
@@ -78,7 +92,8 @@ impl KvStore {
     /// ```
     pub fn set(&mut self, key: String, value: String) -> Result<()>{
         let set_cmd = serde_json::to_string(&Set(key.clone(), value.clone()))?;
-        self.log_file.write(set_cmd.as_bytes())?;
+        write!(&self.log_file, "{}\n", set_cmd)?;
+        //self.log_file.write(set_cmd.as_bytes())?;
         self.kv_memory_map.insert(key, value);
         Ok(())
     }
@@ -92,9 +107,12 @@ impl KvStore {
     /// if the key was previously in the key-value store.
     pub fn remove(&mut self, key:String) -> Result<()> {
         let rm_cmd = serde_json::to_string(&Rm(key.clone()))?;
-        self.log_file.write(rm_cmd.as_bytes())?;
+        write!(&self.log_file, "{}\n", rm_cmd)?;
+        //self.log_file.write(rm_cmd.as_bytes())?;
         //send error if key doesnt exists
-        self.kv_memory_map.remove(&key);
-        Ok(())
+        match self.kv_memory_map.remove(&key) {
+            None => Err(anyhow!(KeyNotFound)),
+            Some(_) => Ok(())
+        }
     }
 }

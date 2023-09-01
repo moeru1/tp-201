@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
-use kvs::{KvStore, Result};
+use kvs::{KvStore, Result, KeyNotFound};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -31,7 +32,8 @@ fn main() -> Result<()>{
 }
 
 fn run(cli: Cli) -> Result<()> {
-    let mut kv_store = KvStore::open("aa")?;
+    let mut kv_store = KvStore::open(PathBuf::from("kv_store.txt"))?;
+
 
     match cli.command {
         CliCommands::Set{key, value} => {
@@ -47,7 +49,19 @@ fn run(cli: Cli) -> Result<()> {
             Ok(())
         }
         CliCommands::Rm{key} => {
-            unimplemented!()
+            let a = kv_store.remove(key);
+            let Err(e) = a else {
+                return Ok(());
+            };
+
+            match e.downcast_ref::<KeyNotFound>() {
+                Some(_) => {
+                    println!("Key not found");
+                    Ok(())
+                }
+                None => Err(e)
+            }
+
         }
     }
 }
