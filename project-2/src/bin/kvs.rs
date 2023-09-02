@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
 use kvs::{KvStore, Result, KeyNotFound};
 use std::path::PathBuf;
+use std::process::{ExitCode, Termination};
+use anyhow::anyhow;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -26,14 +28,30 @@ enum CliCommands {
     }
 }
 
-fn main() -> Result<()>{
+//struct AppResult(Result<()>);
+//
+//impl Termination for AppResult {
+//    fn report(self) -> ExitCode {
+//        match self {
+//            Ok(_) => ExitCode::SUCCESS,
+//            Err(e) => ExitCode::FAILURE
+//        }
+//    }
+//}
+
+fn main() -> Result<()> {
     let cli = Cli::parse();
-    run(cli)
+    let result = run(cli);
+    if result
+        .as_ref()
+            .is_err_and(|e| e.downcast_ref::<KeyNotFound>().is_some()) {
+        std::process::exit(1)
+    }
+    result
 }
 
 fn run(cli: Cli) -> Result<()> {
-    let mut kv_store = KvStore::open(PathBuf::from("kv_store.txt"))?;
-
+    let mut kv_store = KvStore::open(PathBuf::from("."))?;
 
     match cli.command {
         CliCommands::Set{key, value} => {
@@ -57,7 +75,7 @@ fn run(cli: Cli) -> Result<()> {
             match e.downcast_ref::<KeyNotFound>() {
                 Some(_) => {
                     println!("Key not found");
-                    Ok(())
+                    Err(e)
                 }
                 None => Err(e)
             }
